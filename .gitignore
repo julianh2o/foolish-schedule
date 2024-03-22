@@ -1,6 +1,3 @@
-tmp.json
-*.png
 gservices.json
 node_modules
-output.css
-out.html
+dist

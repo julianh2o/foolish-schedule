@@ -7,6 +7,8 @@ import p from "p-iteration";
 import nodeHtmlToImage from "node-html-to-image";
 import font2base64 from "node-font2base64";
 
+const GENERATE_IMAGES = false;
+
 const typeColors = {
     'Logistics': 'bg-gray-100',
     'Food': 'bg-yellow-100',
@@ -24,6 +26,9 @@ const typeColors = {
 const SPREADSHEET_ID = "1Srx_fvxps-QCudCTm-nytppIux-kiO28bLT7Vu0KuEU";
 
 async function fetchSheet(spreadsheetId, sheetName) {
+    const cache = `./dist/${spreadsheetId}_${sheetName}.json`;
+    if (await fs.existsSync(cache)) return JSON.parse(await fs.promises.readFile(cache,"utf-8"));
+
     const creds = JSON.parse(await fs.promises.readFile("./gservices.json", "utf-8"));
 
     const serviceAccountAuth = new JWT({
@@ -38,7 +43,9 @@ async function fetchSheet(spreadsheetId, sheetName) {
     await doc.loadInfo();
     const sheet = doc.sheetsByTitle[sheetName];
     const rows = await sheet.getRows();
-    return rows.map((r) => r.toObject());
+    const res = rows.map((r) => r.toObject());
+    await fs.promises.writeFile(cache,JSON.stringify(res,undefined,2));
+    return res;
 }
 
 const generateTimes = (start, hours) => {
@@ -96,17 +103,19 @@ async function main() {
     // const allDays = _.flatten(await p.mapSeries(["Thursday", "Friday", "Saturday", "Sunday"], async (day) => await dataForDay(day)));
     // const types = _.uniq(_.map(allDays, "type"));
 
+    console.log("Fetching data...");
     const days = await p.mapSeries(dayNames, async (day) => ({
         title: day,
         columns: await generateDay(day),
     }));
-    const allClasses = _.flatten(_.map(_.flatten(_.map(days, "columns")), "data"));
+
+    const ongoingTab = await generateDay("Ongoing");
+    const ongoing = _.flatten(_.map(ongoingTab,"data"));
 
     const emojiFont = font2base64.encodeToDataUrlSync('./NotoColorEmoji.ttf');
 
-
-    const times = generateTimes(6, 21);
-    const css = await fs.promises.readFile("./output.css");
+    const times = generateTimes(8, 20);
+    const css = await fs.promises.readFile("./dist/output.css");
     const emojiFontCss = `@font-face { font-family: 'emoji'; src: url(${emojiFont}) format('woff2'); }`;
     const forPrintCss = `${emojiFontCss}\nbody { width: 2400px; height: 1800px; }`;
 
@@ -114,13 +123,17 @@ async function main() {
     const context = {
         typeColors,
         times,
-        classes: allClasses,
         days,
+        ongoing,
         css
     };
-    await fs.promises.writeFile("tmp.json", JSON.stringify(context, undefined, 2));
+    console.log("Generating Web...");
+    await fs.promises.writeFile("./dist/tmp.json", JSON.stringify(context, undefined, 2));
     const webHtml = _.template(templateHtml)(context);
-    await fs.promises.writeFile("out.html", webHtml);
+    await fs.promises.writeFile("./dist/out.html", webHtml);
+
+    if (!GENERATE_IMAGES) return;
+    console.log("Generate Images..");
     for (const day of days) {
         const printHtml = _.template(templateHtml)({
             ...context,
@@ -128,7 +141,7 @@ async function main() {
             days: [day],
         });
         await nodeHtmlToImage({
-            output: `./${day.title}.png`,
+            output: `./dist/${day.title}.png`,
             html: printHtml
         });
     }
