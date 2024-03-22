@@ -7,7 +7,13 @@ import p from "p-iteration";
 import nodeHtmlToImage from "node-html-to-image";
 import font2base64 from "node-font2base64";
 
-const GENERATE_IMAGES = false;
+//TODO
+//make single events in a slot cover the entire time even if they're short
+// combine thursday, sunday, and ongoing all into the same image
+// add image download links
+// add QR code to print versions ?
+
+const GENERATE_IMAGES = true;
 
 const typeColors = {
     'Logistics': 'bg-gray-100',

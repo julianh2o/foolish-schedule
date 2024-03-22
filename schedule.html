@@ -39,20 +39,18 @@
                             <div class="col-span-1">
                                 <% _.forEach(times, (time,idx) => { %>
                                     <% const items = _.filter(col.data,(item) => idx === 0 && time.interval.isAfter(item.startTime) || idx === times.length-1 && time.interval.isBefore(item.startTime) || time.interval.contains(item.startTime)) %>
-                                    <% if (items.length === 0) { %>
-                                        <div data-time="<%= time.label %>" class="w-full h-<%= baseHeight %> m-px p-2 rounded"></div>
-                                    <% } else { %>
-                                        <% const colorClass = typeColors[items[0].type]; %>
-                                        <div class="<%= colorClass %> w-full h-<%= baseHeight %> text-gray-700 m-px p-2 rounded">
-                                            <% _.forEach(items, (item) => { %>
-                                                <div class="<%= item.class %>">
-                                                    <span class="time font-bold"><%= item.startTime.toFormat("t") %></span>
-                                                    <span class="name"><%= item.name %></span>
-                                                    <span class="host italic"><%= item.host && `- ${item.host}` %></span>
-                                                </div>
-                                            <% }) %>
-                                        </div>
-                                    <% } %>
+                                    <div data-time="<%= time.label %>" class="w-full h-<%= baseHeight %> m-px overflow-visible">
+                                    <div class="w-full">
+                                        <% _.forEach(items, (item) => { %>
+                                            <% const colorClass = typeColors[item.type]; %>
+                                            <div class="<%= colorClass %> <%= item.class %> px-2 text-gray-700 rounded pt-2 pb-2">
+                                                <span class="time font-bold"><%= item.startTime.toFormat("t") %></span>
+                                                <span class="name"><%= item.name %></span>
+                                                <span class="host italic"><%= item.host && `- ${item.host}` %></span>
+                                            </div>
+                                        <% }) %>
+                                    </div>
+                                    </div>
                                 <% }) %>
                             </div>
                         <% }) %>
