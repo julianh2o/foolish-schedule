@@ -8,12 +8,9 @@ import nodeHtmlToImage from "node-html-to-image";
 import font2base64 from "node-font2base64";
 
 //TODO
-//make single events in a slot cover the entire time even if they're short
-// combine thursday, sunday, and ongoing all into the same image
-// add image download links
 // add QR code to print versions ?
 
-const GENERATE_IMAGES = true;
+const GENERATE_IMAGES = false;
 
 const typeColors = {
     'Logistics': 'bg-gray-100',
@@ -33,7 +30,7 @@ const SPREADSHEET_ID = "1Srx_fvxps-QCudCTm-nytppIux-kiO28bLT7Vu0KuEU";
 
 async function fetchSheet(spreadsheetId, sheetName) {
     const cache = `./dist/${spreadsheetId}_${sheetName}.json`;
-    if (await fs.existsSync(cache)) return JSON.parse(await fs.promises.readFile(cache,"utf-8"));
+    if (await fs.existsSync(cache)) return JSON.parse(await fs.promises.readFile(cache, "utf-8"));
 
     const creds = JSON.parse(await fs.promises.readFile("./gservices.json", "utf-8"));
 
@@ -50,7 +47,7 @@ async function fetchSheet(spreadsheetId, sheetName) {
     const sheet = doc.sheetsByTitle[sheetName];
     const rows = await sheet.getRows();
     const res = rows.map((r) => r.toObject());
-    await fs.promises.writeFile(cache,JSON.stringify(res,undefined,2));
+    await fs.promises.writeFile(cache, JSON.stringify(res, undefined, 2));
     return res;
 }
 
@@ -75,7 +72,7 @@ const processSchedule = (item, dayName) => {
         name: item["Name"],
         day: dayName,
         type: item["Type"],
-        host: item["Who"],
+        host: null, //item["Who"],
         description: item["Description"],
         notes: item["Notes"],
         startTime: processTime(item["Time start"]),
@@ -84,6 +81,9 @@ const processSchedule = (item, dayName) => {
         location: item["Location"],
         class: "",
     };
+    out.formattedInterval = _.map(_.compact([out.startTime, out.endTime]), dt => dt.toFormat("t")).join(" - ");
+    if (!out.endTime && out.startTime) out.endTime = out.startTime.plus({ "hours": 1 });
+    out.interval = out.startTime && out.endTime && Interval.fromDateTimes(out.startTime, out.endTime);
     const isLong = ((out.name || "").length + (out.host || "").length) > 50;
     out.class += isLong ? "text-xs" : "leading-tight text-sm";
     return out;
@@ -112,24 +112,28 @@ async function main() {
     console.log("Fetching data...");
     const days = await p.mapSeries(dayNames, async (day) => ({
         title: day,
+        downloadName: ["Thursday", "Sunday"].includes(day) ? "ThursSun.png" : `${day}.png`,
         columns: await generateDay(day),
     }));
 
+    const thursSun = _.filter(days, (day) => ["Thursday", "Sunday"].includes(day.title));
+
     const ongoingTab = await generateDay("Ongoing");
-    const ongoing = _.flatten(_.map(ongoingTab,"data"));
+    const ongoing = _.flatten(_.map(ongoingTab, "data"));
 
     const emojiFont = font2base64.encodeToDataUrlSync('./NotoColorEmoji.ttf');
 
-    const times = generateTimes(8, 20);
     const css = await fs.promises.readFile("./dist/output.css");
     const emojiFontCss = `@font-face { font-family: 'emoji'; src: url(${emojiFont}) format('woff2'); }`;
-    const forPrintCss = `${emojiFontCss}\nbody { width: 2400px; height: 1800px; }`;
+    const forPrintCss = `${emojiFontCss}\nbody { width: 2400px; height: 1800px; }\n.downloadLink { display: none; }`;
 
     const templateHtml = await fs.promises.readFile("./schedule.html", "utf-8");
+    const thusSunPrintHtml = await fs.promises.readFile("./schedule_sun.html", "utf-8");
     const context = {
         typeColors,
-        times,
+        times: generateTimes(8, 20),
         days,
+        baseHeight: 16,
         ongoing,
         css
     };
@@ -139,18 +143,37 @@ async function main() {
     await fs.promises.writeFile("./dist/out.html", webHtml);
 
     if (!GENERATE_IMAGES) return;
-    console.log("Generate Images..");
-    for (const day of days) {
-        const printHtml = _.template(templateHtml)({
+    console.log("Generating: Friday (img)");
+    await nodeHtmlToImage({
+        output: `./dist/Friday.png`, html: _.template(templateHtml)({
             ...context,
+            baseHeight: 14,
+            ongoing: [],
             css: `${context.css}\n${forPrintCss}`,
-            days: [day],
-        });
-        await nodeHtmlToImage({
-            output: `./dist/${day.title}.png`,
-            html: printHtml
-        });
-    }
+            days: [_.find(days, { "title": "Friday" })],
+        })
+    });
+
+    console.log("Generating: Saturday (img)");
+    await nodeHtmlToImage({
+        output: `./dist/Saturday.png`, html: _.template(templateHtml)({
+            ...context,
+            baseHeight: 14,
+            ongoing: [],
+            css: `${context.css}\n${forPrintCss}`,
+            days: [_.find(days, { "title": "Saturday" })],
+        })
+    });
+
+    console.log("Generating: Thurs/Sun (img)");
+    await nodeHtmlToImage({
+        output: `./dist/ThursSun.png`, html: _.template(thusSunPrintHtml)({
+            ...context,
+            times: generateTimes(8, 14),
+            css: `${context.css}\n${forPrintCss}`,
+            days: thursSun,
+        })
+    });
 }
 
 

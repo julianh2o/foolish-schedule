@@ -1,0 +1,98 @@
+
+
+
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Calendar</title>
+    <style>
+        <%= css %>
+    </style>
+  </head>
+  <body class="bg-gray-100 px-4">
+    <div class="grid grid-cols-2 divide-x">
+        <% _.forEach(days, (day) => { %>
+            <% const columnCount = day.columns.length %> 
+            <div class="mx-auto py-2 col-span-1">
+                <div class="flex justify-between items-center mb-4">
+                    <h1 class="text-2xl font-semibold text-gray-700">FoolsFest 2024: <%= day.title %></h1>
+                </div>
+                <div class="bg-white rounded shadow flex">
+                    <div class="bg-gray-50 sticky left-0">
+                        <div class="h-10 bg-teal-700 text-white whitespace-nowrap text-sm py-2 px-3 m-px border-b border-gray-300 font-bold sticky top-0">
+                            <%= day.title %>
+                        </div>
+                        <% _.forEach(times, (time, idx) => { %>
+                            <div class="whitespace-nowrap text-sm h-<%= baseHeight %> text-gray-600 py-2 px-3 m-px border-b border-gray-300 font-bold">
+                                <%= idx === 0 ? "Early" : time.label %>
+                            </div>
+                        <% }) %>
+                    </div>
+                    <div>
+                        <div class="h-10 bg-teal-700 text-white grid grid-cols-<%= columnCount %> divide-x divide-gray-300 sticky top-0">
+                            <% _.forEach(day.columns, (col) => { %>
+                                <div class="col-span-1 py-2 px-3 text-center text-sm font-bold">
+                                    <%= col.name %>
+                                </div>
+                            <% }) %>
+                        </div>
+                        <div class="grid grid-cols-<%= columnCount %> divide-x divide-gray-300">
+                            <% _.forEach(day.columns, (col) => { %>
+                                <div class="col-span-1">
+                                    <% _.forEach(times, (time,idx) => { %>
+                                        <% const items = _.filter(col.data,(item) => idx === 0 && time.interval.isAfter(item.startTime) || idx === times.length-1 && time.interval.isBefore(item.startTime) || time.interval.contains(item.startTime)) %>
+                                        <div data-time="<%= time.label %>" class="w-full h-<%= baseHeight %> m-px overflow-visible">
+                                            <div class="w-full min-h-<%= baseHeight %> flex flex-col">
+                                                <% _.forEach(items, (item) => { %>
+                                                    <% const colorClass = typeColors[item.type]; %>
+                                                    <div class="flex-grow <%= colorClass %> <%= item.class %> px-2 text-gray-700 rounded pt-2 pb-2">
+                                                        <span class="time font-bold"><%= item.startTime.toFormat("t") %></span>
+                                                        <span class="name"><%= item.name %></span>
+                                                        <span class="host italic"><%= item.host && `- ${item.host}` %></span>
+                                                    </div>
+                                                <% }) %>
+                                            </div>
+                                        </div>
+                                    <% }) %>
+                                </div>
+                            <% }) %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <% }) %>
+    </div>
+    <div class="mx-auto">
+        <div class="p-4 bg-slate-200 rounded shadow">
+        <div class="text-lg font-bold">Ongoing</div>
+            <div class="overflow-hidden columns-3 divide-y gap-8">
+                <% _.forEach(ongoing, (item) => { %>
+                    <div class="w-full my-2 break-inside-avoid">
+                        <div class="float-right max-w-46 leading-tight text-end">
+                            <span class="time text-xs whitespace-nowrap"><%= item.startTime && item.startTime.toFormat("t") %></span>
+                            <span class="location text-xs whitespace-nowrap"><%= item.location %></span>
+                            <span class="host text-xs whitespace-nowrap"><%= item.host && `- ${item.host}` %></span>
+                        </div>
+                        <div class="name font-bold"><%= item.name %></div>
+                        <div class="description"><%= item.description %></div>
+                    </div>
+                <% }) %>
+            </div>
+        </div>
+        <div class="p-4 bg-white rounded shadow overflow-hidden columns-3 divide-y">
+            <% _.forEach(_.sortBy(_.filter(_.flatten(_.map(_.flatten(_.map(days,"columns")),"data")),"description"),"name"), (item) => { %>
+                <div class="w-full my-2 break-inside-avoid">
+                    <div class="float-right max-w-46 leading-tight text-end">
+                        <span class="time text-xs whitespace-nowrap"><%= item.startTime.toFormat("t") %></span>
+                        <span class="location text-xs whitespace-nowrap"><%= item.location %></span>
+                        <span class="host text-xs whitespace-nowrap"><%= item.host && `- ${item.host}` %></span>
+                    </div>
+                    <div class="name font-bold"><%= item.name %></div>
+                    <div class="description"><%= item.description %></div>
+                </div>
+            <% }) %>
+        </div>
+    </div>
+  </body>
+</html>

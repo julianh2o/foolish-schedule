@@ -6,6 +6,7 @@
   "scripts": {
     "css": "npx tailwindcss -i ./input.css -o ./dist/output.css",
     "gen": "node index.js",
+    "build": "npm run css && npm run gen",
     "start": "npm run css && npm run gen && npx http-server ./dist"
   },
   "nodemonConfig": {

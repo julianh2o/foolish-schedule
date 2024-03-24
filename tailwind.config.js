@@ -10,6 +10,7 @@ export default {
   },
   safelist: [
     { pattern: /h-.*/, },
+    { pattern: /ml-.*/, },
   ],
   plugins: [],
 }
