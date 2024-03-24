@@ -10,7 +10,7 @@ import font2base64 from "node-font2base64";
 //TODO
 // add QR code to print versions ?
 
-const GENERATE_IMAGES = false;
+const GENERATE_IMAGES = true;
 
 const typeColors = {
     'Logistics': 'bg-gray-100',
@@ -47,7 +47,7 @@ async function fetchSheet(spreadsheetId, sheetName) {
     const sheet = doc.sheetsByTitle[sheetName];
     const rows = await sheet.getRows();
     const res = rows.map((r) => r.toObject());
-    await fs.promises.writeFile(cache, JSON.stringify(res, undefined, 2));
+    // await fs.promises.writeFile(cache, JSON.stringify(res, undefined, 2));
     return res;
 }
 
@@ -138,9 +138,8 @@ async function main() {
         css
     };
     console.log("Generating Web...");
-    await fs.promises.writeFile("./dist/tmp.json", JSON.stringify(context, undefined, 2));
     const webHtml = _.template(templateHtml)(context);
-    await fs.promises.writeFile("./dist/out.html", webHtml);
+    await fs.promises.writeFile("./dist/index.html", webHtml);
 
     if (!GENERATE_IMAGES) return;
     console.log("Generating: Friday (img)");
